@@ -1,0 +1,8 @@
+name: secret-santa
+description: Secret Santa shuffler
+dependencies:
+    browser: any
+    angular: any
+    web_components: any
+transformers:
+- angular
