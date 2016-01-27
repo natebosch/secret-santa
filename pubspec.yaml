@@ -1,8 +1,8 @@
 name: secret-santa
 description: Secret Santa shuffler
 dependencies:
-    browser: any
-    angular: any
-    web_components: any
+    browser:  ^0.10.0
+    angular2: 2.0.0-beta.0
 transformers:
-- angular
+- angular2:
+    entry_points: web/main.dart

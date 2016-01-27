@@ -3,9 +3,8 @@ import 'dart:convert';
 import 'dart:html';
 import 'dart:math';
 
-import 'package:angular/angular.dart';
-import 'package:angular/application_factory.dart';
-import 'package:di/annotations.dart';
+import 'package:angular2/angular2.dart';
+import 'package:angular2/bootstrap.dart';
 
 final random = new Random(new DateTime.now().year);
 
@@ -63,14 +62,18 @@ class NameService {
 
 @Component(
     selector: 'secret-santa',
-    template: '''
-  <name-list name="name" names="names" ng-if="!nameChosen">
+    template: r'''
+  <name-list (nameChange)="name=$event" [names]="names" *ngIf="!nameChosen">
   </name-list>
-  <giftee ng-if="nameChosen" from="name">
+  <giftee *ngIf="nameChosen" [from]="name">
   </giftee>
-''')
+''',
+    providers: const[NameService],
+    directives: const[NameList, Giftee, NgIf]
+)
 class SecretSanta {
   String name;
+
   bool get nameChosen => name != null;
   List<String> names;
 
@@ -85,16 +88,19 @@ class SecretSanta {
     selector: 'name-list',
     template: '''
 Who are you? (be honest!)
-<p ng-repeat="name in names"><a href="" ng-click="choose(name)">{{name}}</a></p>''')
+<p *ngFor="#name of names"><a href="" (click)="choose(name)">{{name}}</a></p>''',
+    directives: const [NgFor]
+)
 class NameList {
-  @NgOneWay('names')
+  @Input()
   List<String> names;
 
-  @NgTwoWay('name')
-  String name;
+  @Output()
+  final nameChange = new EventEmitter<String>();
 
-  choose(String choice) {
-    name = choice;
+  bool choose(String choice) {
+    nameChange.add(choice);
+    return false;
   }
 }
 
@@ -104,7 +110,7 @@ class NameList {
 class Giftee {
   var _fromCompleter = new Completer<String>();
 
-  @NgOneWay('from')
+  @Input()
   void set from(String from) {
     _fromCompleter.complete(from);
   }
@@ -127,15 +133,6 @@ class Giftee {
   }
 }
 
-class SecretSantaModule extends Module {
-  SecretSantaModule() {
-    bind(NameList);
-    bind(SecretSanta);
-    bind(Giftee);
-    bind(NameService);
-  }
-}
-
 void main() {
-  applicationFactory().addModule(new SecretSantaModule()).run();
+  bootstrap(SecretSanta);
 }
