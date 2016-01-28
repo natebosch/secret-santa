@@ -5,6 +5,7 @@ import 'dart:math';
 
 import 'package:angular2/angular2.dart';
 import 'package:angular2/bootstrap.dart';
+import 'package:angular2/router.dart';
 
 final random = new Random(new DateTime.now().year);
 
@@ -62,22 +63,32 @@ class NameService {
 
 @Component(
     selector: 'secret-santa',
-    template: r'''
-  <name-list (nameChange)="name=$event" [names]="names" *ngIf="!nameChosen">
-  </name-list>
-  <giftee *ngIf="nameChosen" [from]="name">
-  </giftee>
+    template: '''
+    <h1> Secret Santa</h1>
+    <router-outlet></router-outlet>
 ''',
-    providers: const[NameService],
-    directives: const[NameList, Giftee, NgIf]
-)
+    providers: const [NameService],
+    directives: const [RouterOutlet])
+@RouteConfig(const [
+  const Route(name: 'Names', path: '/', component: NameList),
+  const Route(name: 'Giftee', path: '/from/:name', component: Giftee),
+])
 class SecretSanta {
-  String name;
-
-  bool get nameChosen => name != null;
   List<String> names;
 
-  SecretSanta(NameService nameService) {
+  SecretSanta(NameService nameService) {}
+}
+
+@Component(
+    selector: 'name-list',
+    template: r'''
+Who are you? (be honest!)
+<p *ngFor="#name of names"><a [routerLink]="['Giftee', {'name':name}]">{{name}}</a></p>''',
+    directives: const [RouterLink, NgFor])
+class NameList {
+  List<String> names;
+
+  NameList(NameService nameService) {
     nameService.participants.then((participants) {
       names = participants;
     });
@@ -85,47 +96,15 @@ class SecretSanta {
 }
 
 @Component(
-    selector: 'name-list',
-    template: '''
-Who are you? (be honest!)
-<p *ngFor="#name of names"><a href="" (click)="choose(name)">{{name}}</a></p>''',
-    directives: const [NgFor]
-)
-class NameList {
-  @Input()
-  List<String> names;
-
-  @Output()
-  final nameChange = new EventEmitter<String>();
-
-  bool choose(String choice) {
-    nameChange.add(choice);
-    return false;
-  }
-}
-
-@Component(
     selector: 'giftee',
     template: '''Hey {{from}}, You should get a gift for {{giftee}}''')
 class Giftee {
-  var _fromCompleter = new Completer<String>();
-
-  @Input()
-  void set from(String from) {
-    _fromCompleter.complete(from);
-  }
-
-  String _from;
-
-  String get from => _from;
-
+  final String from;
   String giftee;
 
-  Giftee(NameService nameService) {
-    Future.wait([_fromCompleter.future, nameService.shuffledNames])
-        .then((results) {
-      _from = results[0];
-      var shuffled = results[1];
+  Giftee(RouteParams params, NameService nameService)
+      : from = params.get('name') {
+    nameService.shuffleNames().then((shuffled) {
       var giverIndex = shuffled.indexOf(from);
       var next = giverIndex + 1 >= shuffled.length ? 0 : giverIndex + 1;
       giftee = shuffled[next];
@@ -134,5 +113,5 @@ class Giftee {
 }
 
 void main() {
-  bootstrap(SecretSanta);
+  bootstrap(SecretSanta, ROUTER_PROVIDERS);
 }
