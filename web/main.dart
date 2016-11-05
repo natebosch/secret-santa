@@ -4,7 +4,7 @@ import 'dart:html';
 import 'dart:math';
 
 import 'package:angular2/angular2.dart';
-import 'package:angular2/bootstrap.dart';
+import 'package:angular2/platform/browser.dart';
 import 'package:angular2/router.dart';
 
 final random = new Random(new DateTime.now().year);
