@@ -7,8 +7,6 @@ import 'package:angular2/angular2.dart';
 import 'package:angular2/platform/browser.dart';
 import 'package:angular2/router.dart';
 
-final random = new Random(new DateTime.now().year);
-
 @Injectable()
 class NameService {
   Future<List<List<String>>> _groups;
@@ -27,11 +25,13 @@ class NameService {
   }
 
   Future<List<String>> _shuffledNames;
-  Future<List<String>> get shuffledNames => _shuffledNames ??= shuffleNames();
+  Future<List<String>> get shuffledNames => _shuffledNames ??= _shuffleNames();
 
-  Future<List<String>> shuffleNames() async {
+  /// Shuffle the names such that no names in a group end up as neighbors.
+  Future<List<String>> _shuffleNames() async {
     var shuffled = await participants;
     var resolvedGroups = await groups;
+    final random = new Random(new DateTime.now().year);
     shuffled.shuffle(random);
     // Ensure no disallowed neighbors
     int problemIndex = indexOfFirstBadMatch(shuffled, resolvedGroups);
@@ -104,7 +104,7 @@ class Giftee {
 
   Giftee(RouteParams params, NameService nameService)
       : from = params.get('name') {
-    nameService.shuffleNames().then((shuffled) {
+    nameService.shuffledNames.then((shuffled) {
       var giverIndex = shuffled.indexOf(from);
       var next = giverIndex + 1 >= shuffled.length ? 0 : giverIndex + 1;
       giftee = shuffled[next];
