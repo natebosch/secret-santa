@@ -1,4 +1,4 @@
-name: secret-santa
+name: secret_santa
 description: Secret Santa shuffler
 dependencies:
     browser:  ^0.10.0
