@@ -1,7 +1,14 @@
-[
-  ["Alice", "Bob", "Charlie", "Danielle", "Natalie", "Joe"],
-  ["Ken", "Donald"],
-  ["Mary", "Susan", "Miles", "Tim"],
-  ["Adam", "Arthur", "Emily"],
-  ["Pat"]
-]
+{
+    "group 1": [
+        [ "Alice", "Bob", "Charlie", "Danielle", "Natalie", "Joe" ],
+        [ "Ken", "Donald" ],
+        [ "Mary", "Susan", "Miles", "Tim" ],
+        [ "Adam", "Arthur", "Emily" ],
+        [ "Pat" ]
+    ],
+    "stooges": [
+        [ "Moe", "Helen" ],
+        [ "Larry", "Mabel" ],
+        [ "Shemp", "Gertrude" ]
+    ]
+}

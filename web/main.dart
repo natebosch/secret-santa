@@ -17,34 +17,39 @@ void main() {
 
 @Injectable()
 class NameService {
-  Future<List<List<String>>> _groups;
+  Future<Map<String, List<List<String>>>> _data;
+  Future<Map<String, List<List<String>>>> get data => _data ??= loadGroups();
 
-  Future<List<List<String>>> get groups => _groups ??= loadGroups();
+  Future<List<String>> get groups async => (await data).keys.toList();
 
-  Future<List<String>> get participants async {
-    var resolvedGroups = await groups;
-    return resolvedGroups.expand((group) => group).toList();
+  Future<List<String>> participants(String name) async {
+    var resolvedGroups = await data;
+    return resolvedGroups[name].expand((group) => group).toList();
   }
 
-  Future<List<List<String>>> loadGroups() async {
+  Future<Map<String, List<List<String>>>> loadGroups() async {
     const path = '/resources/names.json';
     var namesJson = await HttpRequest.getString(path);
-    return List<List<String>>.from(
-        (jsonDecode(namesJson) as Iterable).map((l) => List<String>.from(l)));
+    return Map<String, List<List<String>>>.from((jsonDecode(namesJson) as Map)
+        .map((name, groups) => MapEntry(
+            name,
+            List<List<String>>.from(
+                (groups as Iterable).map((l) => List<String>.from(l))))));
   }
 
-  Future<List<String>> _shuffledNames;
-  Future<List<String>> get shuffledNames => _shuffledNames ??= _shuffleNames();
+  final _shuffledNames = <String, Future<List<String>>>{};
+  Future<List<String>> shuffledNames(String name) =>
+      _shuffledNames.putIfAbsent(name, () => _shuffleNames(name));
 
   /// Shuffle the names such that no names in a group end up as neighbors.
-  Future<List<String>> _shuffleNames() async {
-    var shuffled = await participants;
-    var resolvedGroups = await groups;
+  Future<List<String>> _shuffleNames(String name) async {
+    var shuffled = await participants(name);
+    var resolvedGroups = (await data)[name];
     final random = new Random(new DateTime.now().year);
     shuffled.shuffle(random);
     // Ensure no disallowed neighbors
     int problemIndex = indexOfFirstBadMatch(shuffled, resolvedGroups);
-    while (problemIndex > 0) {
+    while (problemIndex >= 0) {
       int swapWith = random.nextInt(shuffled.length);
       var temp = shuffled[problemIndex];
       shuffled[problemIndex] = shuffled[swapWith];
@@ -69,18 +74,23 @@ class NameService {
 }
 
 class RoutePaths {
-  static final names = RoutePath(path: '/');
-  static final giftee = RoutePath(path: '/from/:name');
+  static final groups = RoutePath(path: '/');
+  static final names = RoutePath(path: '/:group/names');
+  static final giftee = RoutePath(path: '/:group/from/:name');
 }
 
 class Routes {
-  static final names = RouteDefinition(
-      routePath: RoutePaths.names,
-      component: self.NameListNgFactory,
+  static final groups = RouteDefinition(
+      routePath: RoutePaths.groups,
+      component: self.GroupListNgFactory,
       useAsDefault: true);
+  static final names = RouteDefinition(
+    routePath: RoutePaths.names,
+    component: self.NameListNgFactory,
+  );
   static final giftee = RouteDefinition(
       routePath: RoutePaths.giftee, component: self.GifteeNgFactory);
-  static final all = [names, giftee];
+  static final all = [groups, names, giftee];
 }
 
 @Component(
@@ -98,6 +108,26 @@ class SecretSanta {
   SecretSanta(NameService nameService) {}
 }
 
+@Component(selector: 'group-list', template: '''
+Which group?
+<p *ngFor="let group of groups">
+  <a [routerLink]="pathFor(group)">
+    {{group}}
+  </a>
+</p>''', directives: const [RouterLink, NgFor], exports: [RoutePaths])
+class GroupList {
+  List<String> groups;
+
+  GroupList(NameService nameService) {
+    () async {
+      groups = await nameService.groups;
+    }();
+  }
+
+  String pathFor(String group) =>
+      RoutePaths.names.toUrl(parameters: {'group': group});
+}
+
 @Component(selector: 'name-list', template: '''
 Who are you? (be honest!)
 <p *ngFor="let name of names">
@@ -105,17 +135,21 @@ Who are you? (be honest!)
     {{name}}
   </a>
 </p>''', directives: const [RouterLink, NgFor], exports: [RoutePaths])
-class NameList {
+class NameList implements OnActivate {
+  final NameService _nameService;
   List<String> names;
+  String _group;
 
-  NameList(NameService nameService) {
-    nameService.participants.then((participants) {
-      names = participants;
-    });
-  }
+  NameList(this._nameService);
 
   String pathFor(String name) =>
-      RoutePaths.giftee.toUrl(parameters: {'name': name});
+      RoutePaths.giftee.toUrl(parameters: {'group': _group, 'name': name});
+
+  @override
+  void onActivate(_, RouterState current) async {
+    _group = current.parameters['group'];
+    names = await _nameService.participants(_group);
+  }
 }
 
 @Component(
@@ -131,7 +165,8 @@ class Giftee implements OnActivate {
   @override
   void onActivate(_, RouterState current) async {
     from = current.parameters['name'];
-    final shuffledNames = await _nameService.shuffledNames;
+    final group = current.parameters['group'];
+    final shuffledNames = await _nameService.shuffledNames(group);
     final giverIndex = shuffledNames.indexOf(from);
     final next = giverIndex + 1 >= shuffledNames.length ? 0 : giverIndex + 1;
     giftee = shuffledNames[next];
