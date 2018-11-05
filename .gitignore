@@ -1,0 +1,7 @@
+pubspec.lock
+build/
+.packages
+.dart_tool
+pubspec.yaml
+web/
+readme.md
