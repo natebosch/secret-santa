@@ -3,9 +3,17 @@ import 'dart:convert';
 import 'dart:html';
 import 'dart:math';
 
-import 'package:angular2/angular2.dart';
-import 'package:angular2/platform/browser.dart';
-import 'package:angular2/router.dart';
+import 'package:angular/angular.dart';
+import 'package:angular_router/angular_router.dart';
+
+import 'main.template.dart' as self;
+
+@GenerateInjector(routerProvidersHash)
+final injector = self.injector$Injector;
+
+void main() {
+  runApp(self.SecretSantaNgFactory, createInjector: injector);
+}
 
 @Injectable()
 class NameService {
@@ -21,7 +29,8 @@ class NameService {
   Future<List<List<String>>> loadGroups() async {
     const path = '/resources/names.json';
     var namesJson = await HttpRequest.getString(path);
-    return JSON.decode(namesJson);
+    return List<List<String>>.from(
+        (jsonDecode(namesJson) as Iterable).map((l) => List<String>.from(l)));
   }
 
   Future<List<String>> _shuffledNames;
@@ -35,9 +44,7 @@ class NameService {
     shuffled.shuffle(random);
     // Ensure no disallowed neighbors
     int problemIndex = indexOfFirstBadMatch(shuffled, resolvedGroups);
-    int swapCount = 0;
     while (problemIndex > 0) {
-      swapCount++;
       int swapWith = random.nextInt(shuffled.length);
       var temp = shuffled[problemIndex];
       shuffled[problemIndex] = shuffled[swapWith];
@@ -61,30 +68,43 @@ class NameService {
   }
 }
 
+class RoutePaths {
+  static final names = RoutePath(path: '/');
+  static final giftee = RoutePath(path: '/from/:name');
+}
+
+class Routes {
+  static final names = RouteDefinition(
+      routePath: RoutePaths.names,
+      component: self.NameListNgFactory,
+      useAsDefault: true);
+  static final giftee = RouteDefinition(
+      routePath: RoutePaths.giftee, component: self.GifteeNgFactory);
+  static final all = [names, giftee];
+}
+
 @Component(
     selector: 'secret-santa',
     template: '''
     <h1> Secret Santa</h1>
-    <router-outlet></router-outlet>
+    <router-outlet [routes]="Routes.all"></router-outlet>
 ''',
     providers: const [NameService],
-    directives: const [RouterOutlet])
-@RouteConfig(const [
-  const Route(name: 'Names', path: '/', component: NameList),
-  const Route(name: 'Giftee', path: '/from/:name', component: Giftee),
-])
+    directives: const [RouterOutlet],
+    exports: [Routes])
 class SecretSanta {
   List<String> names;
 
   SecretSanta(NameService nameService) {}
 }
 
-@Component(
-    selector: 'name-list',
-    template: r'''
+@Component(selector: 'name-list', template: '''
 Who are you? (be honest!)
-<p *ngFor="#name of names"><a [routerLink]="['Giftee', {'name':name}]">{{name}}</a></p>''',
-    directives: const [RouterLink, NgFor])
+<p *ngFor="let name of names">
+  <a [routerLink]="pathFor(name)">
+    {{name}}
+  </a>
+</p>''', directives: const [RouterLink, NgFor], exports: [RoutePaths])
 class NameList {
   List<String> names;
 
@@ -93,25 +113,27 @@ class NameList {
       names = participants;
     });
   }
+
+  String pathFor(String name) =>
+      RoutePaths.giftee.toUrl(parameters: {'name': name});
 }
 
 @Component(
     selector: 'giftee',
     template: '''Hey {{from}}, You should get a gift for {{giftee}}''')
-class Giftee {
-  final String from;
+class Giftee implements OnActivate {
+  String from;
   String giftee;
+  final NameService _nameService;
 
-  Giftee(RouteParams params, NameService nameService)
-      : from = params.get('name') {
-    nameService.shuffledNames.then((shuffled) {
-      var giverIndex = shuffled.indexOf(from);
-      var next = giverIndex + 1 >= shuffled.length ? 0 : giverIndex + 1;
-      giftee = shuffled[next];
-    });
+  Giftee(this._nameService);
+
+  @override
+  void onActivate(_, RouterState current) async {
+    from = current.parameters['name'];
+    final shuffledNames = await _nameService.shuffledNames;
+    final giverIndex = shuffledNames.indexOf(from);
+    final next = giverIndex + 1 >= shuffledNames.length ? 0 : giverIndex + 1;
+    giftee = shuffledNames[next];
   }
-}
-
-void main() {
-  bootstrap(SecretSanta, ROUTER_PROVIDERS);
 }
