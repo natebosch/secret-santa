@@ -28,7 +28,7 @@ class NameService {
   }
 
   Future<Map<String, List<List<String>>>> loadGroups() async {
-    const path = '/resources/names.json';
+    const path = 'resources/names.json';
     var namesJson = await HttpRequest.getString(path);
     return Map<String, List<List<String>>>.from((jsonDecode(namesJson) as Map)
         .map((name, groups) => MapEntry(
