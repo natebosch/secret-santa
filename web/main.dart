@@ -38,14 +38,14 @@ class NameService {
   }
 
   final _shuffledNames = <String, Future<List<String>>>{};
-  Future<List<String>> shuffledNames(String name) =>
-      _shuffledNames.putIfAbsent(name, () => _shuffleNames(name));
+  Future<List<String>> shuffledNames(String name, int year) =>
+      _shuffledNames.putIfAbsent(name, () => _shuffleNames(name, year));
 
   /// Shuffle the names such that no names in a group end up as neighbors.
-  Future<List<String>> _shuffleNames(String name) async {
+  Future<List<String>> _shuffleNames(String name, int year) async {
     var shuffled = await participants(name);
     var resolvedGroups = (await data)[name];
-    final random = new Random(new DateTime.now().year);
+    final random = Random(year ?? DateTime.now().year);
     shuffled.shuffle(random);
     // Ensure no disallowed neighbors
     int problemIndex = indexOfFirstBadMatch(shuffled, resolvedGroups);
@@ -166,7 +166,8 @@ class Giftee implements OnActivate {
   void onActivate(_, RouterState current) async {
     from = current.parameters['name'];
     final group = current.parameters['group'];
-    final shuffledNames = await _nameService.shuffledNames(group);
+    final shuffledNames = await _nameService.shuffledNames(
+        group, int.tryParse(current.queryParameters['year'] ?? ''));
     final giverIndex = shuffledNames.indexOf(from);
     final next = giverIndex + 1 >= shuffledNames.length ? 0 : giverIndex + 1;
     giftee = shuffledNames[next];
