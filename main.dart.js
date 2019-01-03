@@ -7443,7 +7443,7 @@ v=J
 u=H
 t=C.an
 z=3
-return P.W(W.jB("/resources/names.json",null,null),$async$bv)
+return P.W(W.jB("resources/names.json",null,null),$async$bv)
 case 3:x=w.f9(v.eC(u.pk(t.h_(0,b,null),"$isA"),new F.k9(),null,null),P.c,[P.d,[P.d,P.c]])
 z=1
 break
