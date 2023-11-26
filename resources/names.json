@@ -1,14 +1,8 @@
 {
     "cousins": [
-        [ "Sara", "Bryan", "Nathan", "Jayne", "Carrie", "Dan"],
-        [ "Kate", "David" ],
-        [ "Alex", "Anthony", "Will" ],
-        [ "Matthew", "Kortney", "Andrew", "Taylor", "Morghan" ],
-        [ "Peyton" ]
-    ],
-    "siblings": [
-        [ "Sara", "Bryan" ],
-        [ "Nathan", "Jayne" ],
-        [ "Carrie", "Dan" ]
+        [ "Rebecca", "James" ],
+        [ "Amelia", "Sawyer" ],
+        [ "Simon" ],
+        [ "Ben", "Anna", "Andrew" ]
     ]
 }
